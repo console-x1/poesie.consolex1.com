@@ -2,7 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SiteFooter, SiteHeader } from '@/components/SiteChrome';
-import { formatDate, getAuthors, getAuthorPoems } from '@/lib/content';
+import {
+  findAuthorPoem,
+  formatDate,
+  getAuthors,
+  getAuthorPoems,
+} from '@/lib/content';
 
 type PoemPageProps = {
   params: {
@@ -47,18 +52,18 @@ export const dynamicParams = false;
 
 export function generateStaticParams() {
   return getAuthors().flatMap((author) =>
-    getAuthorPoems(author).map((poem) => ({
-      author: author.slug,
-      poem: poem.slug,
-    })),
+    getAuthorPoems(author).flatMap((poem) => [
+      { author: author.slug, poem: poem.slug },
+      ...(poem.legacySlug
+        ? [{ author: author.slug, poem: poem.legacySlug }]
+        : []),
+    ]),
   );
 }
 
 export function generateMetadata({ params }: PoemPageProps): Metadata {
   const author = getAuthors().find((entry) => entry.slug === params.author);
-  const poem = author
-    ? getAuthorPoems(author).find((entry) => entry.slug === params.poem)
-    : undefined;
+  const poem = author ? findAuthorPoem(author, params.poem) : undefined;
 
   if (!author || !poem) {
     return {};
@@ -93,9 +98,7 @@ export function generateMetadata({ params }: PoemPageProps): Metadata {
 
 export default function PoemPage({ params }: PoemPageProps) {
   const author = getAuthors().find((entry) => entry.slug === params.author);
-  const poem = author
-    ? getAuthorPoems(author).find((entry) => entry.slug === params.poem)
-    : undefined;
+  const poem = author ? findAuthorPoem(author, params.poem) : undefined;
 
   if (!author || !poem) {
     notFound();

@@ -10,6 +10,7 @@ export type Author = {
 
 export type Poem = {
   slug: string;
+  legacySlug?: string;
   date: string;
   title: string;
   text: string;
@@ -83,6 +84,17 @@ export function getAuthorPoems(author: Author): Poem[] {
   return getCollections(author).flatMap((collection) => collection.poems);
 }
 
+export function findAuthorPoem(author: Author, slug: string): Poem | undefined {
+  const normalizedSlug = slugify(decodeURIComponent(slug));
+
+  return getAuthorPoems(author).find(
+    (poem) =>
+      poem.slug === normalizedSlug ||
+      poem.legacySlug === slug ||
+      poem.legacySlug === normalizedSlug,
+  );
+}
+
 function readCollections(author: Author): Collection[] {
   const authorDirectory = join(contentDirectory, author.slug);
   const poemsDirectory = join(authorDirectory, 'poesies');
@@ -142,6 +154,7 @@ function readCollections(author: Author): Collection[] {
       continue;
     }
 
+    delete poem.legacySlug;
     const baseSlug = poem.slug;
     const collectionSlug = slugify(poem.collection);
     let candidate = `${baseSlug}-${poem.date}`;
@@ -181,7 +194,7 @@ function readPoem(path: string, filename: string, collection: string): Poem {
     );
   }
 
-  const [, date, slug] = match;
+  const [, date, filenameSlug] = match;
   const [yearNumber, monthNumber, dayNumber] = date.split('-').map(Number);
   const parsedDate = new Date(Date.UTC(yearNumber, monthNumber - 1, dayNumber));
 
@@ -216,8 +229,12 @@ function readPoem(path: string, filename: string, collection: string): Poem {
     );
   }
 
+  const slug = slugify(filenameSlug);
+  const legacySlug = filenameSlug.toLocaleLowerCase('fr-FR');
+
   return {
-    slug: slug.toLocaleLowerCase('fr-FR'),
+    slug,
+    ...(legacySlug !== slug ? { legacySlug } : {}),
     date,
     title,
     text: lines.slice(1, metadataStart - 1).join('\n').replace(/^\n+/, '').trimEnd(),
