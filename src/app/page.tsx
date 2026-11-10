@@ -4,9 +4,12 @@ import Link from 'next/link';
 import { SiteFooter, SiteHeader } from '@/components/SiteChrome';
 import { getAuthors, getPoemCount } from '@/lib/content';
 
+const siteName = 'Poésies — Des voix, des recueils';
+const siteDescription = 'Un espace collectif pour lire les poésies de plusieurs auteurs.';
+
 export const metadata: Metadata = {
-  title: 'Poésies — Des voix, des recueils',
-  description: 'Un espace collectif pour lire les poésies de plusieurs auteurs.',
+  title: siteName,
+  description: siteDescription,
 };
 
 export default function Home() {
@@ -15,9 +18,23 @@ export default function Home() {
     (total, author) => total + getPoemCount(author),
     0,
   );
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: siteName,
+    description: siteDescription,
+    url: 'https://poesie.consolex1.com/',
+    inLanguage: 'fr-FR',
+  };
 
   return (
     <main className="page-shell">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, '\\u003c'),
+        }}
+      />
       <SiteHeader backHref="#auteurs" backLabel="Les auteurs" />
 
       <section className="intro" aria-labelledby="intro-title">
